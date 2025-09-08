@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Texas Lottery Scratch Pro</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <style>
+    :root {
+      --bg: #1a0b3b;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --accent: #ffcc00;
+      --highlight: #ff3333;
+      --shadow: rgba(0,0,0,0.3);
+      --success: #00cc00;
+      --x-button-bg: #1a1a1a;
+    }
+    * { box-sizing: border-box; font-family: 'Arial Black', Arial, sans-serif; margin:0; padding:0; }
+    html, body { height:100%; background:linear-gradient(180deg,var(--bg),#2c1a5c); color:var(--text); overflow-x:hidden; position:relative; }
+    body::before {
+      content: '';
+      position: fixed;
+      top:0; left:0; width:100%; height:100%;
+      background: radial-gradient(circle, rgba(255,204,0,0.1), transparent);
+      opacity:0.2;
+      z-index:-1;
+      animation: pulse 10s infinite;
+    }
+    .app { max-width:1200px; margin:20px auto; padding:20px; display:grid; grid-template-columns:1fr 320px; gap:20px; }
+    header { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(90deg,var(--accent),#ff9900); padding:15px 20px; border-radius:20px; box-shadow:0 4px 20px var(--shadow); }
+    .brand { display:flex; align-items:center; gap:15px; }
+    .lottery-logo { width:50px; height:50px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 10px var(--shadow); }
+    .lottery-logo svg { width:30px; height:30px; fill:var(--highlight); }
+    h1 { font-size:24px; color:#fff; text-transform:uppercase; letter-spacing:1px; }
+    .small { font-size:14px; color:#fff; opacity:0.9; }
+    .jackpot-ticker { font-size:16px; color:var(--highlight); font-weight:bold; animation: flash 2s infinite; }
+    .header-controls { display:flex; align-items:center; gap:10px; }
+    .panel { background:#f9f9f9; border-radius:20px; padding:20px; box-shadow:0 6px 20px var(--shadow); position:relative; overflow:hidden; min-height:600px; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    select, input[type='text'], button { background:#fff; border:2px solid var(--accent); color:var(--text); padding:10px 15px; border-radius:8px; font-weight:bold; transition: all 0.3s ease; }
+    select[name="strategy"] { width:180px; }
+    button { background:linear-gradient(90deg,var(--accent),#ff9900); color:#fff; border:none; cursor:pointer; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:8px; padding:12px 20px; }
+    button:hover { transform:translateY(-2px); box-shadow:0 4px 15px var(--shadow); }
+    .x-button { 
+      background: var(--x-button-bg); 
+      border: 1px solid var(--accent); 
+      border-radius: 20px; 
+      color: #fff; 
+      padding: 8px 16px; 
+      font-size: 14px; 
+      transition: transform 0.2s ease, background 0.2s ease; 
+      text-decoration: none;
+    }
+    .x-button:hover { 
+      background: var(--accent); 
+      transform: scale(1.05); 
+      box-shadow: 0 2px 10px var(--shadow); 
+    }
+    .x-button svg { width:16px; height:16px; fill:#fff; }
+    .muted { color:#444; font-size:14px; }
+    .result-feed { 
+      margin-top:15px; 
+      display:flex; 
+      flex-direction:column; 
+      gap:12px; 
+      min-height:550px; 
+      overflow-y:auto; 
+      position:relative; 
+    }
+    .result-feed.empty::after {
+      content: 'No tickets selected yet. Click "Pick Now!" to start!';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-size: 16px;
+      text-align: center;
+      opacity: 0.7;
+    }
+    .ticket-card {
+      background:#fff;
+      border:2px solid var(--accent);
+      padding:15px;
+      border-radius:12px;
+      display:flex;
+      gap:12px;
+      position:relative;
+      overflow:hidden;
+      transform: translateY(10px);
+      opacity:0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      min-height:100px;
+    }
+    .ticket-card.show { transform: translateY(0); opacity:1; }
+    .ticket-card.scratch::before {
+      content:'';
+      position:absolute;
+      top:0; left:0; width:100%; height:100%;
+      background:linear-gradient(45deg,#ccc,#aaa);
+      z-index:1;
+      transition:opacity 0.5s ease;
+      opacity:1;
+    }
+    .ticket-card.scratched::before { opacity:0; }
+    .ticket-left { width:50px; display:flex; align-items:center; justify-content:center; }
+    .ticket-body { flex:1; }
+    .ticket-title { font-weight:900; font-size:18px; color:var(--highlight); text-transform:uppercase; }
+    .ticket-meta { color:#444; font-size:14px; margin-top:8px; line-height:1.4; }
+    .ticket-glow { box-shadow:0 0 20px rgba(255,204,0,0.3); border-radius:12px; }
+    aside { display:flex; flex-direction:column; gap:15px; }
+    .side-card { background:#f9f9f9; border-radius:20px; padding:20px; box-shadow:0 6px 20px var(--shadow); }
+    .side-card.history-card { display: flex; flex-direction: column; }
+    .history { flex: 1; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; gap:12px; margin-top:15px; position:relative; }
+    .history.empty::after {
+      content: 'No picks yet';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #666;
+      font-size: 16px;
+      text-align: center;
+      opacity: 0.7;
+    }
+    .hist-item { 
+      background:#fff; 
+      border:2px solid var(--accent); 
+      border-radius:12px; 
+      padding:15px; 
+      transition:all 0.3s ease; 
+      word-break: break-word; 
+      font-size:14px; 
+      line-height:1.5; 
+      max-width:100%; 
+    }
+    .hist-item:hover { transform:translateX(5px); }
+    .side-card .small { 
+      color:var(--text); 
+      opacity:1; 
+      font-size:14px; 
+      line-height:1.5; 
+      padding:10px 0; 
+      word-break: break-word; 
+    }
+    .history-controls { margin-top:10px; margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; }
+    @keyframes pulse {0%{opacity:0.2}50%{opacity:0.4}100%{opacity:0.2}}
+    @keyframes flash {0%{opacity:1}50%{opacity:0.6}100%{opacity:1}}
+    @media (max-width:980px) { 
+      .app { grid-template-columns:1fr; } 
+      header { flex-direction:column; align-items:flex-start; gap:10px; }
+      .header-controls { justify-content:center; width:100%; }
+      .history-controls { justify-content:center; }
+      aside { }
+      .side-card.history-card { }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="lottery-logo" aria-hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 2.5l3.09 6.26 6.91.94-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-.94L12 2.5z" fill="currentColor"/></svg>
+        </div>
+        <div>
+          <h1>Texas Lottery Scratch Pro</h1>
+          <div class="small">Pick Your Winning Scratch Ticket!</div>
+        </div>
+      </div>
+      <div class="header-controls">
+        <div class="jackpot-ticker" id="jackpotTicker">Top Jackpot: Loading…</div>
+        <a href="https://www.buymeacoffee.com/LotteryGenerator" target="_blank" class="x-button">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 13v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V6h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          Donate
+        </a>
+      </div>
+    </header>
+
+    <main class="panel" aria-live="polite">
+      <div class="controls">
+        <select id="priceFilter">
+          <option value="all">All Ticket Prices</option>
+          <option value="1">$1 Tickets</option>
+          <option value="2">$2 Tickets</option>
+          <option value="3">$3 Tickets</option>
+          <option value="5">$5 Tickets</option>
+          <option value="10">$10 Tickets</option>
+          <option value="20">$20 Tickets</option>
+          <option value="30">$30 Tickets</option>
+          <option value="50">$50 Tickets</option>
+          <option value="100">$100 Tickets</option>
+        </select>
+        <select id="count">
+          <option>1</option>
+          <option>3</option>
+          <option>5</option>
+          <option>10</option>
+        </select>
+        <select name="strategy" id="strategy">
+          <option value="random">Random Pick</option>
+          <option value="bestOdds">Best Odds</option>
+          <option value="bigTop">Biggest Prize</option>
+        </select>
+        <input id="seed" type="text" placeholder="Lucky Seed (optional)" style="width:180px" />
+        <button id="manifestBtn">Pick Now!</button>
+        <button id="fiveBtn">5-Ticket Pack</button>
+      </div>
+      <div class="result-feed empty" id="resultFeed" aria-live="polite"></div>
+    </main>
+
+    <aside>
+      <div class="side-card history-card">
+        <div style="font-weight:800">Pick History</div>
+        <div class="history-controls">
+          <button id="copyBtn" class="x-button">
+            <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+            Copy
+          </button>
+          <button id="shareBtn" class="x-button">
+            <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.70l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+            Share
+          </button>
+          <button id="clearBtn" class="x-button">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            Clear
+          </button>
+        </div>
+        <div class="history empty" id="historyList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Static ticket data
+      const tickets = [
+        {id:1878,name:"Cash On The Spot",price:1,prizes:"$1-$500",total:251965,claimed:201528},
+        {id:2124,name:"Winning 7s",price:1,prizes:"$1-$500",total:240212,claimed:180697},
+        {id:2400,name:"$20 Million Supreme",price:100,prizes:"$150-$20M",total:2975959,claimed:2370618},
+        {id:2424,name:"Cash Frenzy",price:1,prizes:"$1-$500",total:214148,claimed:136321},
+        {id:2430,name:"Bonus Break the Bank",price:5,prizes:"$5-$100K",total:4715320,claimed:890015},
+        {id:2435,name:"500X Loteria Spectacular",price:50,prizes:"$50-$3M",total:3143554,claimed:2719528},
+        {id:2458,name:"Great 8s",price:2,prizes:"$2-$30K",total:2085385,claimed:1626700},
+        {id:2474,name:"$250 Grand",price:10,prizes:"$10-$250K",total:2375439,claimed:927846},
+        {id:2494,name:"Dazzling Winnings",price:10,prizes:"$10-$250K",total:2075136,claimed:873928},
+        {id:2504,name:"Crossword",price:3,prizes:"$3-$50K",total:8725299,claimed:5864709},
+        {id:2508,name:"Texas Loteria",price:3,prizes:"$3-$50K",total:7521166,claimed:6630300},
+        {id:2515,name:"Loteria Supreme",price:100,prizes:"$100-$7.5M",total:2748891,claimed:2297486},
+        {id:2518,name:"500X Loteria Spectacular",price:50,prizes:"$50-$3M",total:2470070,claimed:1972184},
+        {id:2541,name:"20X Power Blitz",price:1,prizes:"$1-$5K",total:6096805,claimed:4437322},
+        {id:2542,name:"30X Power Word Blitz",price:3,prizes:"$3-$60K",total:5475171,claimed:3549586},
+        {id:2543,name:"50X Power Blitz",price:5,prizes:"$5-$200K",total:6161086,claimed:3543943},
+        {id:2544,name:"100X Power Blitz",price:10,prizes:"$10-$500K",total:5187697,claimed:3137270},
+        {id:2545,name:"200X Power Blitz",price:20,prizes:"$20-$1M",total:2756962,claimed:1844798},
+        {id:2556,name:"Big Money",price:20,prizes:"$20-$1M",total:2192708,claimed:969711},
+        {id:2563,name:"Mega Loteria",price:10,prizes:"$10-$250K",total:13886381,claimed:11606384},
+        {id:2571,name:"Classic Bingo!",price:2,prizes:"$2-$30K",total:5721132,claimed:4195934},
+        {id:2578,name:"Bingo Mania",price:10,prizes:"$10-$250K",total:1613054,claimed:1013631},
+        {id:2581,name:"Super Crossword",price:5,prizes:"$5-$100K",total:7437169,claimed:2968455},
+        {id:2582,name:"$250,000 50X Cashword",price:10,prizes:"$10-$250K",total:6241685,claimed:4825268},
+        {id:2583,name:"$1,000,000 Crossword",price:20,prizes:"$20-$1M",total:4489076,claimed:4023020},
+        {id:2584,name:"Bingo Times 20",price:5,prizes:"$5-$100K",total:3963831,claimed:2759483},
+        {id:2585,name:"Super Loteria",price:5,prizes:"$5-$100K",total:13208273,claimed:12657872},
+        {id:2586,name:"Million Dollar Loteria",price:20,prizes:"$20-$1M",total:7791826,claimed:6806674},
+        {id:2587,name:"Loteria Supreme",price:100,prizes:"$100-$7.5M",total:1864905,claimed:53524},
+        {id:2588,name:"$400 Million Mega Bucks",price:100,prizes:"$150-$5M",total:1366321,claimed:1046975},
+        {id:2589,name:"500X",price:50,prizes:"$50-$1M",total:1808109,claimed:1177653},
+        {id:2590,name:"X",price:50,prizes:"$75-$1M",total:1754135,claimed:709672},
+        {id:2591,name:"Ultimate Riches",price:30,prizes:"$50-$2M",total:1402795,claimed:808807},
+        {id:2596,name:"$1,000,000 Lucky 7s",price:20,prizes:"$20-$1M",total:1499722,claimed:1374747},
+        {id:2598,name:"$50, $100 OR $500!",price:10,prizes:"$50-$500",total:1153022,claimed:903510},
+        {id:2599,name:"Colossal Cashword",price:50,prizes:"$50-$3M",total:1258791,claimed:852954},
+        {id:2600,name:"Casino Night",price:10,prizes:"$10-$250K",total:2279029,claimed:314257},
+        {id:2603,name:"Lucky Millions",price:20,prizes:"$20-$1M",total:1658481,claimed:985092},
+        {id:2609,name:"$100, $200, $500 OR $1,000!",price:20,prizes:"$100-$1K",total:857830,claimed:440325},
+        {id:2612,name:"Cash Payout",price:10,prizes:"$10-$250K",total:2109084,claimed:1652196},
+        {id:2614,name:"Break the Bank",price:2,prizes:"$2-$30K",total:5007324,claimed:3866979},
+        {id:2615,name:"Joker's Wild",price:5,prizes:"$5-$100K",total:1960678,claimed:1460041},
+        {id:2616,name:"30X Supreme",price:30,prizes:"$30-$3M",total:1920510,claimed:795800},
+        {id:2617,name:"$5,000 Blitz",price:1,prizes:"$1-$5K",total:5303516,claimed:2703163},
+        {id:2618,name:"$60,000 Blitz Word Search",price:3,prizes:"$3-$60K",total:4651817,claimed:1630906},
+        {id:2619,name:"$200,000 Blitz",price:5,prizes:"$5-$200K",total:4141549,claimed:1573142},
+        {id:2620,name:"$500,000 Blitz",price:10,prizes:"$10-$500K",total:3474364,claimed:1378600},
+        {id:2621,name:"$1,000,000 Blitz",price:20,prizes:"$20-$1M",total:1915064,claimed:791715},
+        {id:2623,name:"Limited Edition Mega Loteria",price:10,prizes:"$10-$250K",total:7219647,claimed:6910919},
+        {id:2624,name:"$5 Million Royale",price:50,prizes:"$50-$5M",total:1649176,claimed:483569},
+        {id:2625,name:"Hot Pink 7s",price:5,prizes:"$5-$100K",total:1749186,claimed:1543448},
+        {id:2628,name:"Texas Loteria",price:3,prizes:"$3-$50K",total:7456658,claimed:1236724},
+        {id:2630,name:"Colossal Cash",price:20,prizes:"$20-$50K",total:1742407,claimed:796509},
+        {id:2631,name:"$100,000 Richer",price:5,prizes:"$5-$100K",total:1634991,claimed:578873},
+        {id:2633,name:"$3 Million Ca$h",price:30,prizes:"$30-$3M",total:1940090,claimed:590750},
+        {id:2634,name:"$30,000 Cash",price:2,prizes:"$2-$30K",total:2169121,claimed:1427888},
+        {id:2635,name:"Azulejos",price:5,prizes:"$5-$100K",total:1724069,claimed:1521482},
+        {id:2637,name:"$50, $100 OR $500!",price:10,prizes:"$50-$500",total:1067508,claimed:245837},
+        {id:2638,name:"Mega Jumbo Bucks",price:20,prizes:"$20-$1M",total:1587914,claimed:829143},
+        {id:2639,name:"Double Sided Dollars",price:5,prizes:"$5-$100K",total:1661287,claimed:834441},
+        {id:2642,name:"20X",price:1,prizes:"$1-$5K",total:4781525,claimed:1710797},
+        {id:2643,name:"50X",price:5,prizes:"$5-$200K",total:3466043,claimed:1550123},
+        {id:2644,name:"100X",price:10,prizes:"$10-$500K",total:2822062,claimed:1282509},
+        {id:2645,name:"200X",price:20,prizes:"$20-$1M",total:1950575,claimed:929259},
+        {id:2647,name:"Cash Line Bingo",price:2,prizes:"$2-$30K",total:4427055,claimed:575281},
+        {id:2648,name:"Super Loteria",price:5,prizes:"$5-$100K",total:15685875,claimed:3510238},
+        {id:2649,name:"Lucky $ymbols",price:5,prizes:"$5-$100K",total:1917394,claimed:1201730},
+        {id:2651,name:"Lady Luck Multiplier",price:5,prizes:"$5-$100K",total:1650249,claimed:811197},
+        {id:2652,name:"Bonus Money",price:10,prizes:"$10-$250K",total:2141847,claimed:1200018},
+        {id:2653,name:"Million Dollar Loteria",price:20,prizes:"$20-$1M",total:7363689,claimed:662892},
+        {id:2655,name:"Extreme Multiplier",price:20,prizes:"$20-$1M",total:2187838,claimed:306823},
+        {id:2657,name:"Jaws",price:5,prizes:"$5-$100K",total:1747874,claimed:1004078},
+        {id:2658,name:"$1,000,000 CROSSWORD",price:20,prizes:"$20-$1M",total:4479942,claimed:776670},
+        {id:2661,name:"Premier Play",price:30,prizes:"$30-$1M",total:1721394,claimed:158843},
+        {id:2663,name:"Cowboys",price:5,prizes:"$5-$100K",total:2608248,claimed:208660},
+        {id:2664,name:"Houston Texans",price:5,prizes:"$5-$100K",total:1449067,claimed:181874},
+        {id:2665,name:"$5,000,000 Fortune",price:100,prizes:"$200-$5M",total:1443869,claimed:390625},
+        {id:2669,name:"Mega Loteria",price:10,prizes:"$10-$250K",total:9742867,claimed:582759},
+        {id:2673,name:"Easy...1-2-3",price:1,prizes:"$1-$500",total:221792,claimed:74392},
+        {id:2676,name:"Limited Edition Mega Loteria",price:10,prizes:"$10-$250K",total:7086174,claimed:1252630},
+        {id:2683,name:"Emerald 7s",price:5,prizes:"$5-$200K",total:2691507,claimed:80395},
+        {id:2684,name:"Ruby 7s",price:10,prizes:"$10-$500K",total:2110372,claimed:61354},
+        {id:2685,name:"Diamond 7s",price:20,prizes:"$20-$1M",total:2606132,claimed:47386},
+        {id:2700,name:"Break the Bank",price:2,prizes:"$2-$30K",total:5095516,claimed:361770}
+      ];
+
+      const el = id => document.getElementById(id);
+      const jackpotTicker = el('jackpotTicker');
+      const manifestBtn = el('manifestBtn');
+      const fiveBtn = el('fiveBtn');
+      const priceFilter = el('priceFilter');
+      const countEl = el('count');
+      const strategyEl = el('strategy');
+      const resultFeed = el('resultFeed');
+      const historyList = el('historyList');
+      const copyBtn = el('copyBtn');
+      const shareBtn = el('shareBtn');
+      const clearBtn = el('clearBtn');
+      const seedInput = el('seed');
+
+      // Match history card height to panel
+      function matchHeights() {
+        const panel = document.querySelector('.panel');
+        const historyCard = document.querySelector('.side-card.history-card');
+        const aside = document.querySelector('aside');
+        if (panel && historyCard && aside) {
+          // Ensure panel height accounts for all content
+          panel.style.height = 'auto';
+          const panelHeight = panel.getBoundingClientRect().height;
+          historyCard.style.height = `${panelHeight}px`;
+          aside.style.minHeight = `${panelHeight}px`;
+          aside.style.maxHeight = `${panelHeight}px`;
+        }
+      }
+
+      // Parse top prize
+      function parseTopPrize(s) {
+        if (!s || typeof s !== 'string') return 0;
+        const parts = s.split('-').map(p => p.trim());
+        const maxPart = parts[parts.length - 1] || '$0';
+        const match = maxPart.match(/\$?([\d,.]+)\s*(M|K)?/i);
+        if (!match) {
+          console.warn('Invalid prize format:', s);
+          return 0;
+        }
+        let value = parseFloat(match[1].replace(/,/g, ''));
+        const suffix = (match[2] || '').toUpperCase();
+        if (suffix === 'M') value *= 1_000_000;
+        else if (suffix === 'K') value *= 1_000;
+        return value;
+      }
+
+      // Update jackpot ticker
+      function updateJackpot() {
+        if (!tickets || tickets.length === 0) {
+          jackpotTicker.textContent = 'Top Jackpot: Unavailable';
+          return;
+        }
+        const maxPrize = Math.max(...tickets.map(t => parseTopPrize(t.prizes)));
+        jackpotTicker.textContent = `Top Jackpot: $${maxPrize.toLocaleString()}`;
+      }
+
+      // Escape HTML
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+      }
+
+      // Calculate remaining tickets and percentage
+      function remaining(t) {
+        return Math.max(0, (Number(t.total) || 0) - (Number(t.claimed) || 0));
+      }
+      function remainingPct(t) {
+        const total = Number(t.total) || 0;
+        return total <= 0 ? 0 : (remaining(t) / total * 100);
+      }
+
+      // Play sound effect
+      function playSound() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = ctx.createOscillator();
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(440, ctx.currentTime);
+          oscillator.connect(ctx.destination);
+          oscillator.start();
+          oscillator.stop(ctx.currentTime + 0.2);
+        } catch (e) {
+          console.warn('Audio not supported:', e);
+        }
+      }
+
+      // Render a single ticket
+      function renderPick(t, note) {
+        if (!t || !t.name || !t.price) {
+          console.error('Invalid ticket data:', t);
+          return;
+        }
+        console.log('Rendering ticket:', t.name, note, `Remaining: ${remainingPct(t).toFixed(1)}%`, `Top Prize: $${parseTopPrize(t.prizes).toLocaleString()}`);
+        resultFeed.classList.remove('empty');
+        const id = 'pick-' + Date.now() + Math.random();
+        const html = `
+          <div class="ticket-card scratch ticket-glow" id="${id}">
+            <div class="ticket-left">
+              <div style="width:50px;height:50px;border-radius:8px;background:linear-gradient(135deg,#ffcc00,#ff9900);display:flex;align-items:center;justify-content:center">
+                <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:#fff">
+                  <path d="M12 2.5l3.09 6.26 6.91.94-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-.94L12 2.5z"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ticket-body">
+              <div class="ticket-title">${esc(t.name)} <span style="font-weight:600;color:#666;font-size:14px">• $${esc(t.price)}</span></div>
+              <div class="ticket-meta">Prizes: ${esc(t.prizes)} • Remaining: ${remaining(t).toLocaleString()} (${remainingPct(t).toFixed(1)}%) • Top Prize: $${parseTopPrize(t.prizes).toLocaleString()}</div>
+              <div class="small" style="margin-top:8px;color:#666">${esc(note)}</div>
+            </div>
+          </div>`;
+        const node = document.createElement('div');
+        node.innerHTML = html;
+        const card = node.querySelector('.ticket-card');
+        if (!card) {
+          console.error('Failed to create ticket card');
+          return;
+        }
+        resultFeed.prepend(card);
+        requestAnimationFrame(() => card.classList.add('show'));
+        setTimeout(() => card.classList.add('scratched'), 500);
+        if (window.confetti) {
+          confetti({ particleCount: 150, spread: 100, origin: { y: 0.3 } });
+        }
+        playSound();
+        const hist = JSON.parse(localStorage.getItem('tx_history_v3') || '[]');
+        hist.unshift({ ts: Date.now(), id: t.id || 0, name: t.name, price: t.price, note });
+        localStorage.setItem('tx_history_v3', JSON.stringify(hist.slice(0, 500)));
+        renderHistory();
+        // Update heights after adding a new ticket
+        setTimeout(matchHeights, 600);
+      }
+
+      // Render pick history with pick numbers in oldest-to-newest order
+      function renderHistory() {
+        const hist = JSON.parse(localStorage.getItem('tx_history_v3') || '[]');
+        historyList.innerHTML = '';
+        historyList.classList.toggle('empty', hist.length === 0);
+        [...hist].reverse().forEach((h, index) => {
+          const d = new Date(h.ts);
+          const pickNumber = index + 1; // Oldest pick is Pick 1
+          const div = document.createElement('div');
+          div.className = 'hist-item';
+          div.innerHTML = `<strong>Pick ${pickNumber}:</strong> [${d.toLocaleTimeString('en-US')}] ${esc(h.name)} - $${esc(h.price)} (${esc(h.note)})`;
+          historyList.appendChild(div);
+        });
+        // Update heights after rendering history
+        matchHeights();
+      }
+
+      // Get filtered ticket pool
+      function getPool() {
+        const pool = tickets.filter(t => priceFilter.value === 'all' || String(t.price) === priceFilter.value);
+        console.log('Ticket pool size:', pool.length, 'Price filter:', priceFilter.value);
+        return pool;
+      }
+
+      // Generate random integer with optional seed
+      function randInt(max) {
+        const seed = seedInput.value.trim();
+        if (seed) {
+          let hash = 0;
+          for (let i = 0; i < seed.length; i++) {
+            hash = (hash << 5) - hash + seed.charCodeAt(i);
+            hash = hash >>> 0;
+          }
+          hash = (hash ^ Date.now()) >>> 0;
+          return hash % max;
+        }
+        return Math.floor(Math.random() * max);
+      }
+
+      // Smart ticket selection
+      function smartPool(base, strat) {
+        const filtered = base.filter(t => remaining(t) > 0);
+        if (strat === 'random') return filtered;
+        const sorted = filtered.map(t => ({
+          ...t,
+          rem: remaining(t),
+          remPct: remainingPct(t),
+          topPrize: parseTopPrize(t.prizes)
+        }));
+        if (strat === 'bestOdds') {
+          return sorted.sort((a, b) => b.remPct - a.remPct);
+        }
+        if (strat === 'bigTop') {
+          return sorted.sort((a, b) => b.topPrize - a.topPrize);
+        }
+        return sorted;
+      }
+
+      // Handle ticket picking
+      function doManifest() {
+        console.log('Pick Now! clicked');
+        resultFeed.innerHTML = '';
+        resultFeed.classList.add('empty');
+        const count = Number(countEl.value) || 1;
+        const pool = smartPool(getPool(), strategyEl.value);
+        if (pool.length === 0) {
+          console.warn('No tickets match criteria');
+          alert('No tickets match your criteria. Try changing the price filter or strategy.');
+          return;
+        }
+        const topN = Math.min(5, pool.length);
+        const selectPool = strategyEl.value === 'random' ? pool : pool.slice(0, topN);
+        console.log(`Strategy: ${strategyEl.value}, Selecting from top ${selectPool.length} tickets:`, 
+                    selectPool.map(t => ({
+                      name: t.name,
+                      remPct: remainingPct(t).toFixed(1),
+                      topPrize: parseTopPrize(t.prizes).toLocaleString()
+                    })));
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const idx = randInt(selectPool.length);
+            const ticket = selectPool[idx];
+            const note = strategyEl.value === 'random' ? 'Random Pick' :
+                         strategyEl.value === 'bestOdds' ? 'Best Odds Pick' :
+                         'Big Prize Pick';
+            renderPick(ticket, note);
+          }, i * 600);
+        }
+      }
+
+      // Handle 5-ticket pack
+      function doFive() {
+        console.log('5-Ticket Pack clicked');
+        resultFeed.innerHTML = '';
+        resultFeed.classList.add('empty');
+        const pool = smartPool(getPool(), strategyEl.value);
+        if (pool.length === 0) {
+          console.warn('No tickets available for 5-ticket pack');
+          alert('No tickets available. Try changing the price filter or strategy.');
+          return;
+        }
+        const topN = Math.min(5, pool.length);
+        const selectPool = strategyEl.value === 'random' ? pool : pool.slice(0, topN);
+        console.log(`Strategy: ${strategyEl.value}, Selecting from top ${selectPool.length} tickets:`, 
+                    selectPool.map(t => ({
+                      name: t.name,
+                      remPct: remainingPct(t).toFixed(1),
+                      topPrize: parseTopPrize(t.prizes).toLocaleString()
+                    })));
+        const idx = randInt(selectPool.length);
+        const ticket = selectPool[idx];
+        const note = '5-Ticket Pack';
+        renderPick(ticket, note);
+      }
+
+      // Copy history to clipboard
+      copyBtn.addEventListener('click', () => {
+        console.log('Copy history clicked');
+        const hist = JSON.parse(localStorage.getItem('tx_history_v3') || '[]');
+        if (hist.length === 0) {
+          alert('No history to copy');
+          return;
+        }
+        const text = [...hist].reverse().map((h, index) => {
+          const pickNumber = index + 1;
+          return `Pick ${pickNumber}: [${new Date(h.ts).toLocaleString('en-US')}] ${h.name} - $${h.price} (${h.note})`;
+        }).join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+          alert('History copied to clipboard!');
+        }).catch(() => {
+          alert('Failed to copy history. Please copy manually.');
+        });
+      });
+
+      // Share history to X.com
+      shareBtn.addEventListener('click', () => {
+        console.log('Share to X.com clicked');
+        const hist = JSON.parse(localStorage.getItem('tx_history_v3') || '[]');
+        if (hist.length === 0) {
+          alert('No history to share');
+          return;
+        }
+        const latestPick = hist[0];
+        const text = `Just picked "${latestPick.name}" ($${latestPick.price}) on Texas Lottery Scratch Pro! 🎟️ Try your luck! #TexasLottery`;
+        const url = encodeURIComponent('https://your-app-url.com');
+        const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${url}`;
+        window.open(shareUrl, '_blank');
+      });
+
+      // Clear history
+      clearBtn.addEventListener('click', () => {
+        console.log('Clear history clicked');
+        if (confirm('Clear pick history?')) {
+          localStorage.setItem('tx_history_v3', '[]');
+          resultFeed.innerHTML = '';
+          resultFeed.classList.add('empty');
+          renderHistory();
+        }
+      });
+
+      // Event listeners
+      manifestBtn.addEventListener('click', () => {
+        console.log('Manifest button event triggered');
+        doManifest();
+      });
+      fiveBtn.addEventListener('click', () => {
+        console.log('Five button event triggered');
+        doFive();
+      });
+      priceFilter.addEventListener('change', () => {
+        console.log('Price filter changed:', priceFilter.value);
+        updateJackpot();
+      });
+      strategyEl.addEventListener('change', () => {
+        console.log('Strategy changed:', strategyEl.value);
+      });
+
+      // Initial setup
+      console.log('Initializing app');
+      updateJackpot();
+      renderHistory();
+      matchHeights();
+      window.addEventListener('resize', matchHeights);
+    });
+  </script>
+</body>
+</html>
